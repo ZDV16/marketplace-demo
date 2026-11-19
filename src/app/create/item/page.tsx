@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 
-const categories = ["Vehicles", "Property Rentals", "Apparel", "Classifieds", "Electronics", "Entertainment", "Family", "Free Stuff", "Garden & Outdoor", "Hobbies", "Home Goods", "Home Improvement", "Home Sales", "Musical Instruments", "Office Supplies", "Pet Supplies", "Sporting Goods", "Toys & Games", "Buy and sell groups"];
+const categories = ["Furniture", "Electronics", "Clothing", "Home & Garden", "Sports", "Books", "Vehicles", "Property Rentals", "Apparel", "Classifieds", "Entertainment", "Family", "Free Stuff", "Garden & Outdoor", "Hobbies", "Home Goods", "Home Improvement", "Home Sales", "Musical Instruments", "Office Supplies", "Pet Supplies", "Sporting Goods", "Toys & Games", "Buy and sell groups"];
 
 function SellerHeader() {
   return <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5"><Link href="/" className="flex items-center gap-2 text-xl font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1877f2] text-white">F</span> Marketplace</Link><Link href="/" className="text-sm font-semibold text-slate-600 hover:text-[#1877f2]">Browse listings</Link></div></header>;
