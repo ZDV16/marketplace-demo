@@ -31,7 +31,6 @@ const demoItem: ListingDetail = {
 export default function ItemPage({ params }: { params: Promise<{ id: string }> }) {
   const [id, setId] = useState("");
   const [item, setItem] = useState<ListingDetail>(demoItem);
-  const [buyerEmail, setBuyerEmail] = useState("");
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
@@ -101,14 +100,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
 
   async function sendMessage(event: FormEvent) {
     event.preventDefault();
-    if (!buyerEmail.includes("@") || !message.trim()) {
-      setStatus("Enter your email and a message.");
+    if (!message.trim()) {
+      setStatus("Enter a message.");
       return;
     }
     if (supabase) {
       const { error } = await supabase.from("messages").insert({
         listing_id: item.id,
-        buyer_email: buyerEmail.trim(),
+        buyer_email: getVisitorId(),
         seller_email: item.sellerEmail,
         message: message.trim(),
       });
@@ -118,12 +117,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       }
     }
 
-    const subject = encodeURIComponent(`Marketplace inquiry: ${item.title}`);
-    const body = encodeURIComponent(
-      `Hi,\n\nI'm interested in "${item.title}".\n\n${message.trim()}\n\nMy email: ${buyerEmail.trim()}`,
-    );
-    window.location.href = `mailto:${item.sellerEmail}?subject=${subject}&body=${body}`;
-    setStatus("Email draft opened for the seller.");
+    setStatus("Message sent!");
     setMessage("");
   }
 
@@ -141,7 +135,7 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         <p className="mt-5 flex items-center gap-1.5 text-sm text-slate-500"><MapPin size={16} className="text-[#1d72f2]" /> {item.location}</p>
         <div className="my-7 border-t border-slate-100 pt-6"><h2 className="font-bold">About this item</h2><p className="mt-3 text-sm leading-6 text-slate-600">{item.description}</p></div>
         <div className="flex items-center gap-3 border-t border-slate-100 pt-6"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fce4c7] text-sm font-bold text-[#9a5c14]">S</div><div><p className="text-sm font-bold">{item.sellerEmail}</p><p className="text-xs text-slate-500">Seller</p></div></div>
-        <form onSubmit={sendMessage} className="mt-6 space-y-3"><label className="block text-sm font-bold">Message seller</label><input type="email" value={buyerEmail} onChange={(event) => setBuyerEmail(event.target.value)} placeholder="Your email" className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#1d72f2]" /><div className="flex gap-2"><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Is this still available?" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#1d72f2]" /><button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1d72f2] text-white hover:bg-[#105dcc]" aria-label="Send message"><Send size={17} /></button></div>{status && <p className={`flex items-center gap-1 text-xs font-semibold ${status === "Message sent!" ? "text-emerald-600" : "text-rose-600"}`}><MessageCircle size={13} /> {status}</p>}</form>
+        <form onSubmit={sendMessage} className="mt-6 space-y-3"><label className="block text-sm font-bold">Message seller</label><div className="flex gap-2"><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Is this still available?" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#1d72f2]" /><button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1d72f2] text-white hover:bg-[#105dcc]" aria-label="Send message"><Send size={17} /></button></div>{status && <p className={`flex items-center gap-1 text-xs font-semibold ${status === "Message sent!" ? "text-emerald-600" : "text-rose-600"}`}><MessageCircle size={13} /> {status}</p>}</form>
       </div>
     </div>
   </div></main>;

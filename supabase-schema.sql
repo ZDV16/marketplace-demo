@@ -14,11 +14,16 @@ create table if not exists public.listings (
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid not null references public.listings(id) on delete cascade,
-  buyer_email varchar(255) not null,
+  buyer_email varchar(255),
+  buyer_id uuid,
   seller_email varchar(255) not null,
   message text not null,
   created_at timestamptz not null default now()
 );
+
+alter table public.messages
+  alter column buyer_email drop not null,
+  add column if not exists buyer_id uuid;
 
 create table if not exists public.likes (
   listing_id uuid not null references public.listings(id) on delete cascade,

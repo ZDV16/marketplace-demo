@@ -12,6 +12,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   Tag,
+  X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -28,6 +29,14 @@ type Listing = {
   image: string;
   seller: string;
   featured?: boolean;
+};
+
+type InboxMessage = {
+  id: string;
+  listing_id: string;
+  message: string;
+  created_at: string;
+  listings: { title: string } | { title: string }[] | null;
 };
 
 const categories = [
@@ -146,6 +155,8 @@ export default function Home() {
   const [showFilters, setShowFilters] = useState(false);
   const [displayListings, setDisplayListings] = useState<Listing[]>(listings);
   const [isLoading, setIsLoading] = useState(true);
+  const [showMessages, setShowMessages] = useState(false);
+  const [messages, setMessages] = useState<InboxMessage[]>([]);
 
   useEffect(() => {
     const localFavorites = JSON.parse(
@@ -186,6 +197,15 @@ export default function Home() {
       .eq("visitor_id", getVisitorId())
       .then(({ data }) => {
         if (data) setFavorites(data.map((like) => like.listing_id));
+      });
+
+    supabase
+      .from("messages")
+      .select("id,listing_id,message,created_at,listings(title)")
+      .eq("buyer_email", getVisitorId())
+      .order("created_at", { ascending: false })
+      .then(({ data }) => {
+        if (data) setMessages(data as InboxMessage[]);
       });
   }, []);
 
@@ -263,6 +283,10 @@ export default function Home() {
             <a href="#browse" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">Browse</a>
             <a href="#how-it-works" className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100">How it works</a>
           </nav>
+          <button onClick={() => setShowMessages(true)} className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100" aria-label="Open messages">
+            <MessageCircle size={20} />
+            {messages.length > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#1d72f2]" />}
+          </button>
           <Link href="/create/item" className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#1d72f2] px-4 text-sm font-bold text-white shadow-[0_5px_12px_rgba(29,114,242,.2)] transition hover:bg-[#105dcc]">
             <Plus size={17} strokeWidth={2.5} />
             <span className="hidden sm:inline">Sell something</span>
@@ -378,6 +402,27 @@ export default function Home() {
           <span>© 2025 Marketplace Demo</span>
         </div>
       </footer>
+      {showMessages && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/30" onClick={() => setShowMessages(false)}>
+          <aside className="h-full w-full max-w-md bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <div><p className="text-xs font-bold uppercase tracking-[.12em] text-[#1d72f2]">Inbox</p><h2 className="mt-1 text-2xl font-bold">Messages</h2></div>
+              <button onClick={() => setShowMessages(false)} className="rounded-full p-2 text-slate-400 hover:bg-slate-100" aria-label="Close messages"><X size={20} /></button>
+            </div>
+            <div className="mt-6 space-y-3">
+              {messages.length ? messages.map((entry) => (
+                <Link key={entry.id} href={`/item/${entry.listing_id}`} onClick={() => setShowMessages(false)} className="block rounded-xl border border-slate-200 p-4 hover:border-blue-200 hover:bg-blue-50/30">
+                  <p className="text-sm font-bold">{Array.isArray(entry.listings) ? entry.listings[0]?.title : entry.listings?.title || "Listing"}</p>
+                  <p className="mt-2 line-clamp-2 text-sm text-slate-600">{entry.message}</p>
+                  <p className="mt-2 text-xs text-slate-400">{new Date(entry.created_at).toLocaleString()}</p>
+                </Link>
+              )) : (
+                <div className="rounded-xl border border-dashed border-slate-300 py-12 text-center"><MessageCircle className="mx-auto text-slate-300" size={28} /><p className="mt-3 text-sm font-semibold text-slate-500">No messages yet</p></div>
+              )}
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }
