@@ -9,7 +9,7 @@ import { supabase } from "@/lib/supabase";
 const categories = ["Furniture", "Electronics", "Clothing", "Home & Garden", "Sports", "Books", "Vehicles", "Property Rentals", "Apparel", "Classifieds", "Entertainment", "Family", "Free Stuff", "Garden & Outdoor", "Hobbies", "Home Goods", "Home Improvement", "Home Sales", "Musical Instruments", "Office Supplies", "Pet Supplies", "Sporting Goods", "Toys & Games", "Buy and sell groups"];
 
 function SellerHeader() {
-  return <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5"><Link href="/" className="flex items-center gap-2 text-xl font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1877f2] text-white">F</span> Marketplace</Link><Link href="/" className="text-sm font-semibold text-slate-600 hover:text-[#1877f2]">Browse listings</Link></div></header>;
+  return <header className="border-b border-slate-200 bg-white"><div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5"><Link href="/" className="flex items-center gap-2 text-xl font-bold"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1877f2] text-white">F</span> Marketplace</Link><div className="flex items-center gap-4"><Link href="/stripe/connect" className="text-sm font-semibold text-[#635bff] hover:text-[#554dcf]">Connect with Stripe</Link><Link href="/" className="text-sm font-semibold text-slate-600 hover:text-[#1877f2]">Browse listings</Link></div></div></header>;
 }
 
 export default function CreateItemPage() {

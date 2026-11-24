@@ -11,6 +11,34 @@ create table if not exists public.listings (
   updated_at timestamptz not null default now()
 );
 
+alter table public.listings
+  add column if not exists status varchar(20) not null default 'available'
+  check (status in ('available', 'sold'));
+
+create table if not exists public.seller_accounts (
+  email varchar(255) primary key,
+  stripe_account_id varchar(255) not null unique,
+  charges_enabled boolean not null default false,
+  details_submitted boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.orders (
+  id uuid primary key default gen_random_uuid(),
+  listing_id uuid not null references public.listings(id) on delete cascade,
+  checkout_session_id varchar(255) not null unique,
+  payment_intent_id varchar(255),
+  stripe_account_id varchar(255) not null,
+  seller_email varchar(255) not null,
+  buyer_email varchar(255),
+  amount_cents integer not null,
+  application_fee_cents integer not null,
+  currency varchar(10) not null default 'usd',
+  status varchar(20) not null default 'paid',
+  created_at timestamptz not null default now()
+);
+
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   listing_id uuid not null references public.listings(id) on delete cascade,
@@ -40,10 +68,16 @@ create index if not exists idx_listings_category on public.listings(category);
 create index if not exists idx_listings_created_at on public.listings(created_at desc);
 create index if not exists idx_messages_listing_id on public.messages(listing_id);
 create index if not exists idx_likes_listing_id on public.likes(listing_id);
+create index if not exists idx_listings_status on public.listings(status);
+create index if not exists idx_seller_accounts_stripe_id on public.seller_accounts(stripe_account_id);
+create index if not exists idx_orders_listing_id on public.orders(listing_id);
+create index if not exists idx_orders_checkout_session on public.orders(checkout_session_id);
 
 alter table public.listings enable row level security;
 alter table public.messages enable row level security;
 alter table public.likes enable row level security;
+alter table public.seller_accounts enable row level security;
+alter table public.orders enable row level security;
 
 drop policy if exists "Anyone can view listings" on public.listings;
 create policy "Anyone can view listings" on public.listings for select using (true);
@@ -56,6 +90,12 @@ create policy "Users can update their own listings"
   on public.listings for update
   using (seller_email = auth.email())
   with check (seller_email = auth.email());
+
+drop policy if exists "Anyone can mark listings sold" on public.listings;
+create policy "Anyone can mark listings sold"
+  on public.listings for update
+  using (true)
+  with check (true);
 
 drop policy if exists "Anyone can view messages" on public.messages;
 create policy "Anyone can view messages" on public.messages for select using (true);
@@ -71,6 +111,21 @@ create policy "Anyone can create likes" on public.likes for insert with check (t
 
 drop policy if exists "Anyone can remove likes" on public.likes;
 create policy "Anyone can remove likes" on public.likes for delete using (true);
+
+drop policy if exists "Anyone can view seller accounts" on public.seller_accounts;
+create policy "Anyone can view seller accounts" on public.seller_accounts for select using (true);
+
+drop policy if exists "Anyone can create seller accounts" on public.seller_accounts;
+create policy "Anyone can create seller accounts" on public.seller_accounts for insert with check (true);
+
+drop policy if exists "Anyone can update seller accounts" on public.seller_accounts;
+create policy "Anyone can update seller accounts" on public.seller_accounts for update using (true) with check (true);
+
+drop policy if exists "Anyone can view orders" on public.orders;
+create policy "Anyone can view orders" on public.orders for select using (true);
+
+drop policy if exists "Anyone can create orders" on public.orders;
+create policy "Anyone can create orders" on public.orders for insert with check (true);
 
 drop policy if exists "Anyone can upload listing images" on storage.objects;
 create policy "Anyone can upload listing images"
@@ -93,4 +148,9 @@ $$;
 drop trigger if exists update_listings_updated_at on public.listings;
 create trigger update_listings_updated_at
 before update on public.listings
+for each row execute function public.update_updated_at_column();
+
+drop trigger if exists update_seller_accounts_updated_at on public.seller_accounts;
+create trigger update_seller_accounts_updated_at
+before update on public.seller_accounts
 for each row execute function public.update_updated_at_column();

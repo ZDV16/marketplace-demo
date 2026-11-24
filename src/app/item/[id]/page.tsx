@@ -15,6 +15,7 @@ type ListingDetail = {
   sellerEmail: string;
   image: string;
   description: string;
+  status: "available" | "sold";
 };
 
 const demoItem: ListingDetail = {
@@ -26,6 +27,7 @@ const demoItem: ListingDetail = {
   sellerEmail: "maya@example.com",
   image: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=1400&q=85",
   description: "A beautifully preserved lounge chair with warm walnut arms and a comfortable upholstered seat.",
+  status: "available",
 };
 
 export default function ItemPage({ params }: { params: Promise<{ id: string }> }) {
@@ -35,6 +37,9 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(true);
   const [favorite, setFavorite] = useState(false);
+  const [sellerConnected, setSellerConnected] = useState(false);
+  const [buying, setBuying] = useState(false);
+  const [purchaseError, setPurchaseError] = useState("");
 
   useEffect(() => {
     params.then((value) => setId(value.id));
@@ -46,10 +51,11 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
       setLoading(false);
       return;
     }
+    const client = supabase;
 
-    supabase
+    client
       .from("listings")
-      .select("id,title,price,category,location,seller_email,image_url,description")
+      .select("id,title,price,category,location,seller_email,image_url,description,status")
       .eq("id", id)
       .maybeSingle()
       .then(({ data, error }) => {
@@ -63,7 +69,14 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
             sellerEmail: data.seller_email,
             image: data.image_url || demoItem.image,
             description: data.description || "No description provided.",
+            status: data.status === "sold" ? "sold" : "available",
           });
+          client
+            .from("seller_accounts")
+            .select("charges_enabled")
+            .eq("email", data.seller_email)
+            .maybeSingle()
+            .then(({ data: seller }) => setSellerConnected(Boolean(seller?.charges_enabled)));
         }
         setLoading(false);
       });
@@ -95,6 +108,24 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         visitor_id: getVisitorId(),
       });
       if (!error) setFavorite(true);
+    }
+  }
+
+  async function buyNow() {
+    setBuying(true);
+    setPurchaseError("");
+    try {
+      const response = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ listingId: item.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Could not start checkout.");
+      window.location.assign(data.url);
+    } catch (cause) {
+      setPurchaseError(cause instanceof Error ? cause.message : "Could not start checkout.");
+      setBuying(false);
     }
   }
 
@@ -133,6 +164,20 @@ export default function ItemPage({ params }: { params: Promise<{ id: string }> }
         <div className="flex items-start justify-between gap-5"><div><p className="text-xs font-bold uppercase tracking-[.13em] text-[#1d72f2]">{item.category}</p><h1 className="mt-3 text-3xl font-bold tracking-[-.04em]">{item.title}</h1></div><button onClick={toggleFavorite} className={`rounded-full border p-3 transition ${favorite ? "border-rose-200 bg-rose-50 text-rose-500" : "border-slate-200 text-slate-500 hover:text-rose-500"}`} aria-label={favorite ? "Unlike listing" : "Like listing"}><Heart size={20} fill={favorite ? "currentColor" : "none"} /></button></div>
         <p className="mt-5 text-3xl font-bold">${item.price.toFixed(2)}</p>
         <p className="mt-5 flex items-center gap-1.5 text-sm text-slate-500"><MapPin size={16} className="text-[#1d72f2]" /> {item.location}</p>
+        {item.status === "sold" ? (
+          <div className="mt-6 rounded-xl bg-slate-100 px-4 py-3 text-center text-sm font-bold text-slate-500">Sold</div>
+        ) : sellerConnected ? (
+          <div className="mt-6">
+            <button type="button" onClick={buyNow} disabled={buying} className="h-12 w-full rounded-xl bg-[#635bff] text-sm font-bold text-white shadow-sm hover:bg-[#554dcf] disabled:opacity-60">
+              {buying ? "Opening checkout..." : "Buy Now"}
+            </button>
+            {purchaseError && <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">{purchaseError}</p>}
+          </div>
+        ) : (
+          <div className="mt-6 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-xs font-semibold text-slate-500">
+            This seller has not connected Stripe yet.
+          </div>
+        )}
         <div className="my-7 border-t border-slate-100 pt-6"><h2 className="font-bold">About this item</h2><p className="mt-3 text-sm leading-6 text-slate-600">{item.description}</p></div>
         <div className="flex items-center gap-3 border-t border-slate-100 pt-6"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-[#fce4c7] text-sm font-bold text-[#9a5c14]">S</div><div><p className="text-sm font-bold">{item.sellerEmail}</p><p className="text-xs text-slate-500">Seller</p></div></div>
         <form onSubmit={sendMessage} className="mt-6 space-y-3"><label className="block text-sm font-bold">Message seller</label><div className="flex gap-2"><input value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Is this still available?" className="h-11 min-w-0 flex-1 rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#1d72f2]" /><button className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#1d72f2] text-white hover:bg-[#105dcc]" aria-label="Send message"><Send size={17} /></button></div>{status && <p className={`flex items-center gap-1 text-xs font-semibold ${status === "Message sent!" ? "text-emerald-600" : "text-rose-600"}`}><MessageCircle size={13} /> {status}</p>}</form>

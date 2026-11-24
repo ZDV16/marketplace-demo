@@ -40,6 +40,27 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 
 The client helper is in [`src/lib/supabase.ts`](./src/lib/supabase.ts). The app supports Supabase listings, image uploads, messages, and anonymous likes once environment variables are configured. Demo listings remain as fallback data when Supabase is unavailable.
 
+## Stripe Connect setup
+
+Run the updated [`supabase-schema.sql`](./supabase-schema.sql) to add seller accounts and orders.
+
+Add the provided sandbox keys to `.env.local` and deploy the same values in Vercel:
+
+```env
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_...
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+SUPABASE_SERVICE_ROLE_KEY=optional-server-only-key
+```
+
+After deploying, register a Connect webhook for the production URL:
+
+```bash
+node --env-file=.env.local scripts/create-webhook.mjs https://your-app.vercel.app
+```
+
+Copy the printed signing secret into `STRIPE_WEBHOOK_SECRET`, redeploy, and verify a checkout with the test card `4242 4242 4242 4242`.
+
 ## Current safeguards
 
 - TypeScript and ESLint checks

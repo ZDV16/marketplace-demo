@@ -29,6 +29,7 @@ type Listing = {
   image: string;
   seller: string;
   featured?: boolean;
+  status?: "available" | "sold";
 };
 
 type InboxMessage = {
@@ -171,7 +172,7 @@ export default function Home() {
 
     supabase
       .from("listings")
-      .select("id,title,price,category,location,seller_email,image_url,created_at")
+      .select("id,title,price,category,location,seller_email,image_url,created_at,status")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (!error && data) {
@@ -185,6 +186,7 @@ export default function Home() {
               time: "Recently listed",
               image: listing.image_url || "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=900&q=85",
               seller: listing.seller_email,
+              status: listing.status === "sold" ? "sold" : "available",
             })),
           );
         }
@@ -219,7 +221,8 @@ export default function Home() {
         `${listing.title} ${listing.category} ${listing.location}`
           .toLowerCase()
           .includes(query);
-      return matchesCategory && matchesSearch;
+      const isAvailable = listing.status !== "sold";
+      return matchesCategory && matchesSearch && isAvailable;
     });
   }, [activeCategory, search, displayListings]);
 
@@ -287,6 +290,9 @@ export default function Home() {
             <MessageCircle size={20} />
             {messages.length > 0 && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-[#1d72f2]" />}
           </button>
+          <Link href="/stripe/connect" className="hidden h-10 shrink-0 items-center rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-600 hover:border-[#635bff] hover:text-[#635bff] lg:flex">
+            Connect with Stripe
+          </Link>
           <Link href="/create/item" className="flex h-10 shrink-0 items-center gap-2 rounded-full bg-[#1d72f2] px-4 text-sm font-bold text-white shadow-[0_5px_12px_rgba(29,114,242,.2)] transition hover:bg-[#105dcc]">
             <Plus size={17} strokeWidth={2.5} />
             <span className="hidden sm:inline">Sell something</span>
